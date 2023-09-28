@@ -1,0 +1,98 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
+}
+
+datasource db {
+  provider = "cockroachdb"
+  url      = env("DATABASE_URL")
+}
+
+model Course {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String
+  title       String       @db.String(200)
+  description String?      @db.String(200)
+  imageUrl    String?      @db.String(200)
+  price       Float?
+  isPublished Boolean      @default(false)
+  categoryId  String?      @db.Uuid // Change the data type to UUID
+  category    Category?    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  attachments Attachment[]
+  createdAt   DateTime     @default(now()) @db.Timestamptz
+  updatedAt   DateTime     @updatedAt @db.Timestamptz
+  chapters    Chapter[]
+  purchases   Purchase[]
+}
+
+model Category {
+  id      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name    String   @unique
+  courses Course[]
+}
+
+model Attachment {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  url       String   @db.String()
+  courseId  String   @db.Uuid
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+}
+
+model Chapter {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title        String
+  description  String?        @db.String()
+  videoUrl     String?        @db.String()
+  position     Int
+  isPublished  Boolean        @default(false)
+  isFree       Boolean        @default(false)
+  muxData      MuxData?
+  courseId     String         @db.Uuid
+  course       Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  userProgress UserProgress[]
+  createdAt    DateTime       @default(now()) @db.Timestamptz
+  updatedAt    DateTime       @updatedAt @db.Timestamptz
+}
+
+model MuxData {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assetId    String
+  playbackId String?
+  chapterId  String  @unique @db.Uuid
+  chapter    Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+}
+
+model UserProgress {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String
+  chapterId   String   @db.Uuid
+  chapter     Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+
+  @@unique([userId, chapterId])
+}
+
+model Purchase {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String
+  courseId  String   @db.Uuid
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  @@unique([userId, courseId])
+}
+
+model StripeCustomer {
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @unique
+
+  stripeCustomerId String   @unique
+  createdAt        DateTime @default(now()) @db.Timestamptz
+  updatedAt        DateTime @updatedAt @db.Timestamptz
+}
